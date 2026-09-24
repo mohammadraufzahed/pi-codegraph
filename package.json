@@ -2,14 +2,33 @@
   "name": "pi-codegraph",
   "version": "1.0.0",
   "description": "Pi coding agent extension: CodeGraph tools — surgical code intelligence (context, explore, node, query) instead of file-by-file crawling.",
-  "keywords": ["pi-package", "codegraph", "pi-extension", "code-intelligence"],
+  "keywords": [
+    "pi-package",
+    "codegraph",
+    "pi-extension",
+    "code-intelligence"
+  ],
   "license": "MIT",
   "repository": "mohammadraufzahed/pi-codegraph",
   "pi": {
-    "extensions": ["./extensions/index.ts"]
+    "extensions": [
+      "./extensions/index.ts"
+    ]
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*",
-    "typebox": "*"
+    "@earendil-works/pi-coding-agent": ">=0.87.0 <0.88.0",
+    "typebox": "^1.3.0"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.87.1",
+    "@types/node": "^26.6.2",
+    "tsx": "^4.23.15",
+    "typebox": "^1.3.34",
+    "typescript": "^7.0.2"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "smoke": "tsx tests/smoke.ts",
+    "check": "npm run typecheck && npm run smoke"
   }
 }

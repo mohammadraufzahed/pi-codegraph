@@ -36,6 +36,23 @@ pi install git:github.com/mohammadraufzahed/pi-codegraph
 Then in any project: `codegraph_init` once — afterwards the agent
 prefers `codegraph_context`/`explore`/`node` over crawling.
 
+## Compatibility
+
+This package is tested with pi coding agent `>=0.87.0 <0.88.0` and
+`typebox` `^1.3.0`. npm will warn when it is installed with pi or
+TypeBox versions outside those peer dependency ranges.
+
+## Development
+
+```bash
+npm ci
+npm run check
+```
+
+`npm run check` runs TypeScript typechecking and a smoke verification
+that imports the extension and confirms all CodeGraph tools register
+against a stub pi extension API.
+
 ## Example
 
 ```
