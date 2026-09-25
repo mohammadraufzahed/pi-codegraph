@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.14.2/.schema/devbox.schema.json",
+  "packages": [
+    "nodejs@latest",
+    "nodePackages.npm@latest"
+  ],
+  "shell": {
+    "scripts": {
+      "typecheck": [
+        "npm run typecheck"
+      ],
+      "smoke": [
+        "npm run smoke"
+      ],
+      "check": [
+        "npm run check"
+      ]
+    }
+  }
+}

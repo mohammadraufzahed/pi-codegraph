@@ -105,7 +105,7 @@ export default function piCodegraph(pi: ExtensionAPI) {
 			if (!(await ok(ctx.cwd))) return noCli;
 			if (!hasIndex(ctx.cwd)) return noIndex;
 			const r = await run(["status"], ctx.cwd);
-			return { content: [{ type: "text", text: text(r) }] };
+			return { content: [{ type: "text", text: text(r) }], details: {} };
 		},
 	});
 
@@ -119,7 +119,7 @@ export default function piCodegraph(pi: ExtensionAPI) {
 		async execute(_id, _params, _signal, _onUpdate, ctx) {
 			if (!(await ok(ctx.cwd))) return noCli;
 			const r = await run(["init"], ctx.cwd, 600_000);
-			return { content: [{ type: "text", text: text(r) }] };
+			return { content: [{ type: "text", text: text(r) }], details: {} };
 		},
 	});
 
@@ -133,7 +133,7 @@ export default function piCodegraph(pi: ExtensionAPI) {
 			if (!(await ok(ctx.cwd))) return noCli;
 			if (!hasIndex(ctx.cwd)) return noIndex;
 			const r = await run(["sync"], ctx.cwd);
-			return { content: [{ type: "text", text: text(r) }] };
+			return { content: [{ type: "text", text: text(r) }], details: {} };
 		},
 	});
 
@@ -153,7 +153,7 @@ export default function piCodegraph(pi: ExtensionAPI) {
 			if (!(await ok(ctx.cwd))) return noCli;
 			if (!hasIndex(ctx.cwd)) return noIndex;
 			const r = await run(["query", params.search], ctx.cwd);
-			return { content: [{ type: "text", text: text(r) }] };
+			return { content: [{ type: "text", text: text(r) }], details: {} };
 		},
 	});
 
@@ -178,7 +178,7 @@ export default function piCodegraph(pi: ExtensionAPI) {
 			if (params.maxNodes) args.push("--max-nodes", String(params.maxNodes));
 			if (params.noCode) args.push("--no-code");
 			const r = await run(args, ctx.cwd);
-			return { content: [{ type: "text", text: text(r) }] };
+			return { content: [{ type: "text", text: text(r) }], details: {} };
 		},
 	});
 
@@ -194,7 +194,7 @@ export default function piCodegraph(pi: ExtensionAPI) {
 			if (!(await ok(ctx.cwd))) return noCli;
 			if (!hasIndex(ctx.cwd)) return noIndex;
 			const r = await run(["explore", params.query], ctx.cwd);
-			return { content: [{ type: "text", text: text(r) }] };
+			return { content: [{ type: "text", text: text(r) }], details: {} };
 		},
 	});
 
@@ -210,7 +210,7 @@ export default function piCodegraph(pi: ExtensionAPI) {
 			if (!(await ok(ctx.cwd))) return noCli;
 			if (!hasIndex(ctx.cwd)) return noIndex;
 			const r = await run(["node", params.name], ctx.cwd);
-			return { content: [{ type: "text", text: text(r) }] };
+			return { content: [{ type: "text", text: text(r) }], details: {} };
 		},
 	});
 
@@ -223,7 +223,7 @@ export default function piCodegraph(pi: ExtensionAPI) {
 			if (!(await ok(ctx.cwd))) return noCli;
 			if (!hasIndex(ctx.cwd)) return noIndex;
 			const r = await run(["files"], ctx.cwd);
-			return { content: [{ type: "text", text: text(r) }] };
+			return { content: [{ type: "text", text: text(r) }], details: {} };
 		},
 	});
 }
