@@ -91,8 +91,17 @@ export default function piCodegraph(pi: ExtensionAPI) {
 		details: { error: "no-cli" },
 	};
 	const hasIndex = (cwd: string) => existsSync(join(cwd, ".codegraph"));
-	const ok = async (cwd: string) =>
-		run(["version"], cwd, 10_000).then((r) => r.code === 0);
+	/** Per-cwd health-check cache — one `codegraph version` spawn per session/cwd. */
+	const healthChecks = new Map<string, Promise<boolean>>();
+	const ok = (cwd: string): Promise<boolean> => {
+		let cached = healthChecks.get(cwd);
+		if (!cached) {
+			cached = run(["version"], cwd, 10_000).then((r) => r.code === 0);
+			healthChecks.set(cwd, cached);
+			cached.catch(() => healthChecks.delete(cwd));
+		}
+		return cached;
+	};
 
 	pi.registerTool({
 		name: "codegraph_status",
