@@ -33,20 +33,29 @@ interface RunResult {
 	out: string;
 	err: string;
 	timedOut: boolean;
+	aborted: boolean;
 }
 
 function run(
 	args: string[],
 	cwd: string,
 	timeout = 120_000,
+	signal?: AbortSignal,
 ): Promise<RunResult> {
 	return new Promise((resolve) => {
-		execFile(
+		if (signal?.aborted) {
+			resolve({ code: 1, out: "", err: "", timedOut: false, aborted: true });
+			return;
+		}
+		let aborted = false;
+		const child = execFile(
 			"codegraph",
 			args,
 			{ cwd, timeout, maxBuffer: 32 * 1024 * 1024 },
 			(err, stdout, stderr) => {
+				signal?.removeEventListener("abort", onAbort);
 				resolve({
+					aborted,
 					code:
 						err && typeof (err as { code?: number }).code === "number"
 							? ((err as { code?: number }).code ?? 1)
@@ -55,10 +64,18 @@ function run(
 								: 0,
 					out: String(stdout ?? ""),
 					err: String(stderr ?? ""),
-					timedOut: Boolean((err as { killed?: boolean } | null)?.killed),
+					timedOut: !aborted && Boolean((err as { killed?: boolean } | null)?.killed),
 				});
 			},
 		);
+		const onAbort = () => {
+			aborted = true;
+			child.kill("SIGTERM");
+			setTimeout(() => {
+				if (!child.killed) child.kill("SIGKILL");
+			}, 5_000).unref();
+		};
+		signal?.addEventListener("abort", onAbort, { once: true });
 	});
 }
 
@@ -68,7 +85,7 @@ function text(r: RunResult): string {
 		body.length > MAX_OUT
 			? body.slice(0, MAX_OUT) + `\n\n[truncated — ${body.length} chars total]`
 			: body;
-	return `exit ${r.code}${r.timedOut ? " (timeout)" : ""}\n${trunc || "(no output)"}`;
+	return `exit ${r.code}${r.timedOut ? " (timeout)" : ""}${r.aborted ? " (aborted)" : ""}\n${trunc || "(no output)"}`;
 }
 
 export default function piCodegraph(pi: ExtensionAPI) {
@@ -110,10 +127,10 @@ export default function piCodegraph(pi: ExtensionAPI) {
 			"Show CodeGraph index status for the project: file/node/edge counts, freshness, db size.",
 		promptSnippet: "Check CodeGraph index status",
 		parameters: Type.Object({}),
-		async execute(_id, _params, _signal, _onUpdate, ctx) {
+		async execute(_id, _params, signal, _onUpdate, ctx) {
 			if (!(await ok(ctx.cwd))) return noCli;
 			if (!hasIndex(ctx.cwd)) return noIndex;
-			const r = await run(["status"], ctx.cwd);
+			const r = await run(["status"], ctx.cwd, undefined, signal);
 			return { content: [{ type: "text", text: text(r) }], details: {} };
 		},
 	});
@@ -125,9 +142,9 @@ export default function piCodegraph(pi: ExtensionAPI) {
 			"Build the CodeGraph index for the current project (first run parses the whole repo — seconds to minutes).",
 		promptSnippet: "Index this project with CodeGraph",
 		parameters: Type.Object({}),
-		async execute(_id, _params, _signal, _onUpdate, ctx) {
+		async execute(_id, _params, signal, _onUpdate, ctx) {
 			if (!(await ok(ctx.cwd))) return noCli;
-			const r = await run(["init"], ctx.cwd, 600_000);
+			const r = await run(["init"], ctx.cwd, 600_000, signal);
 			return { content: [{ type: "text", text: text(r) }], details: {} };
 		},
 	});
@@ -138,10 +155,10 @@ export default function piCodegraph(pi: ExtensionAPI) {
 		description:
 			"Incrementally refresh the CodeGraph index after file changes.",
 		parameters: Type.Object({}),
-		async execute(_id, _params, _signal, _onUpdate, ctx) {
+		async execute(_id, _params, signal, _onUpdate, ctx) {
 			if (!(await ok(ctx.cwd))) return noCli;
 			if (!hasIndex(ctx.cwd)) return noIndex;
-			const r = await run(["sync"], ctx.cwd);
+			const r = await run(["sync"], ctx.cwd, undefined, signal);
 			return { content: [{ type: "text", text: text(r) }], details: {} };
 		},
 	});
@@ -158,10 +175,10 @@ export default function piCodegraph(pi: ExtensionAPI) {
 		parameters: Type.Object({
 			search: Type.String({ description: "Symbol name to search" }),
 		}),
-		async execute(_id, params, _signal, _onUpdate, ctx) {
+		async execute(_id, params, signal, _onUpdate, ctx) {
 			if (!(await ok(ctx.cwd))) return noCli;
 			if (!hasIndex(ctx.cwd)) return noIndex;
-			const r = await run(["query", params.search], ctx.cwd);
+			const r = await run(["query", params.search], ctx.cwd, undefined, signal);
 			return { content: [{ type: "text", text: text(r) }], details: {} };
 		},
 	});
@@ -180,13 +197,13 @@ export default function piCodegraph(pi: ExtensionAPI) {
 			maxNodes: Type.Optional(Type.Number()),
 			noCode: Type.Optional(Type.Boolean()),
 		}),
-		async execute(_id, params, _signal, _onUpdate, ctx) {
+		async execute(_id, params, signal, _onUpdate, ctx) {
 			if (!(await ok(ctx.cwd))) return noCli;
 			if (!hasIndex(ctx.cwd)) return noIndex;
 			const args = ["context", params.task];
 			if (params.maxNodes) args.push("--max-nodes", String(params.maxNodes));
 			if (params.noCode) args.push("--no-code");
-			const r = await run(args, ctx.cwd);
+			const r = await run(args, ctx.cwd, undefined, signal);
 			return { content: [{ type: "text", text: text(r) }], details: {} };
 		},
 	});
@@ -199,10 +216,10 @@ export default function piCodegraph(pi: ExtensionAPI) {
 		parameters: Type.Object({
 			query: Type.String({ description: "Area/topic/symbol to explore" }),
 		}),
-		async execute(_id, params, _signal, _onUpdate, ctx) {
+		async execute(_id, params, signal, _onUpdate, ctx) {
 			if (!(await ok(ctx.cwd))) return noCli;
 			if (!hasIndex(ctx.cwd)) return noIndex;
-			const r = await run(["explore", params.query], ctx.cwd);
+			const r = await run(["explore", params.query], ctx.cwd, undefined, signal);
 			return { content: [{ type: "text", text: text(r) }], details: {} };
 		},
 	});
@@ -215,10 +232,10 @@ export default function piCodegraph(pi: ExtensionAPI) {
 		parameters: Type.Object({
 			name: Type.String({ description: "Symbol name or file path" }),
 		}),
-		async execute(_id, params, _signal, _onUpdate, ctx) {
+		async execute(_id, params, signal, _onUpdate, ctx) {
 			if (!(await ok(ctx.cwd))) return noCli;
 			if (!hasIndex(ctx.cwd)) return noIndex;
-			const r = await run(["node", params.name], ctx.cwd);
+			const r = await run(["node", params.name], ctx.cwd, undefined, signal);
 			return { content: [{ type: "text", text: text(r) }], details: {} };
 		},
 	});
@@ -228,10 +245,10 @@ export default function piCodegraph(pi: ExtensionAPI) {
 		label: "CodeGraph Files",
 		description: "Show the project's file structure from the index.",
 		parameters: Type.Object({}),
-		async execute(_id, _params, _signal, _onUpdate, ctx) {
+		async execute(_id, _params, signal, _onUpdate, ctx) {
 			if (!(await ok(ctx.cwd))) return noCli;
 			if (!hasIndex(ctx.cwd)) return noIndex;
-			const r = await run(["files"], ctx.cwd);
+			const r = await run(["files"], ctx.cwd, undefined, signal);
 			return { content: [{ type: "text", text: text(r) }], details: {} };
 		},
 	});
